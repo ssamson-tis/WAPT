@@ -1,0 +1,33 @@
+object WaptDaemon: TWaptDaemon
+  OnCreate = DataModuleCreate
+  OldCreateOrder = False
+  Height = 303
+  HorizontalOffset = 916
+  VerticalOffset = 293
+  Width = 184
+  object IdHTTPServer1: TIdHTTPServer
+    Bindings = <>
+    DefaultPort = 8088
+    ServerSoftware = 'Wapt Service'
+    OnCommandGet = IdHTTPServer1CommandGet
+    left = 40
+    top = 20
+  end
+  object Timer1: TTimer
+    Interval = 60000
+    OnTimer = Timer1Timer
+    left = 40
+    top = 88
+  end
+  object APythonEngine: TAtomPythonEngine
+    IO = PythonIO
+    left = 64
+    top = 168
+  end
+  object PythonIO: TPythonInputOutput
+    UnicodeIO = False
+    RawOutput = False
+    left = 64
+    top = 232
+  end
+end

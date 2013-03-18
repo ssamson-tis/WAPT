@@ -1,0 +1,506 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <Flags>
+        <MainUnitHasCreateFormStatements Value="False"/>
+      </Flags>
+      <MainUnit Value="0"/>
+      <Title Value="wapt-get"/>
+      <UseAppBundle Value="False"/>
+      <ResourceType Value="res"/>
+      <Icon Value="0"/>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <AutoIncrementBuild Value="True"/>
+      <MinorVersionNr Value="6"/>
+      <RevisionNr Value="4"/>
+      <StringTable CompanyName="Tranquil IT Systems" ProductName="WAPT Installation" ProductVersion=""/>
+    </VersionInfo>
+    <BuildModes Count="1" Active="Default">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <CommandLineParams Value="-h"/>
+        <LaunchingApplication PathPlusParams="\usr\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="4">
+      <Item1>
+        <PackageName Value="FCL"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="pltis_python4delphi"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="pltis_superobject"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="pl_indycomp"/>
+      </Item4>
+    </RequiredPackages>
+    <Units Count="43">
+      <Unit0>
+        <Filename Value="waptget.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="waptget"/>
+        <IsVisibleTab Value="True"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="161"/>
+        <CursorPos X="1" Y="183"/>
+        <UsageCount Value="222"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="waptcommon.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="waptcommon"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="25" Y="32"/>
+        <UsageCount Value="207"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\..\indy\IdDNSResolver.pas"/>
+        <UnitName Value="IdDNSResolver"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="507"/>
+        <CursorPos X="25" Y="544"/>
+        <UsageCount Value="67"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\jcl\source\common\JclSysInfo.pas"/>
+        <UnitName Value="JclSysInfo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="5575"/>
+        <CursorPos X="47" Y="5598"/>
+        <UsageCount Value="241"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\jcl\source\include\jcl.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="241"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\superobject\superobject.pas"/>
+        <UnitName Value="superobject"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="3146"/>
+        <CursorPos X="31" Y="3164"/>
+        <UsageCount Value="230"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="soutils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="soutils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="37"/>
+        <CursorPos X="1" Y="44"/>
+        <UsageCount Value="200"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="tiscommon.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="tiscommon"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="200"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\jcl\source\common\JclUnicode.pas"/>
+        <UnitName Value="JclUnicode"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="4724"/>
+        <CursorPos X="33" Y="4747"/>
+        <UsageCount Value="56"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\pltis_jcl\source\common\JclSysInfo.pas"/>
+        <UnitName Value="JclSysInfo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="5781"/>
+        <CursorPos X="14" Y="5762"/>
+        <UsageCount Value="3"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\pltis_superobject\source\superobject.pas"/>
+        <UnitName Value="superobject"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="3104"/>
+        <CursorPos X="1" Y="3125"/>
+        <UsageCount Value="1"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\fcl-db\src\sqldb\sqldb.pp"/>
+        <UnitName Value="sqldb"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="352"/>
+        <CursorPos X="14" Y="387"/>
+        <UsageCount Value="3"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="C:\codetyphon\lazarus\components\lazutils\fileutil.pas"/>
+        <UnitName Value="FileUtil"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="66"/>
+        <CursorPos X="24" Y="84"/>
+        <UsageCount Value="3"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\..\pltis_openerp\tisutils.pas"/>
+        <UnitName Value="tisutils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="43"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="tisstrings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="tisstrings"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="154"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="tisinifiles.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="tisinifiles"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="49"/>
+        <CursorPos X="1" Y="49"/>
+        <UsageCount Value="153"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="tisregistry.pas"/>
+        <UnitName Value="tisregistry"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1855"/>
+        <CursorPos X="26" Y="1868"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\sysutilh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="221"/>
+        <CursorPos X="13" Y="240"/>
+        <UsageCount Value="1"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\fcl-registry\src\registry.pp"/>
+        <UnitName Value="registry"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="67"/>
+        <CursorPos X="14" Y="85"/>
+        <UsageCount Value="1"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="folderroutines.pas"/>
+        <UnitName Value="FolderRoutines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="127"/>
+        <CursorPos X="13" Y="144"/>
+        <UsageCount Value="9"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="systemroutines.pas"/>
+        <UnitName Value="SystemRoutines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="328"/>
+        <CursorPos X="1" Y="359"/>
+        <UsageCount Value="9"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\finah.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="7"/>
+        <CursorPos X="38" Y="31"/>
+        <UsageCount Value="10"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="C:\codetyphon\lazarus\components\pl_Indy\source\base\IdDNSResolver.pas"/>
+        <UnitName Value="IdDNSResolver"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="190"/>
+        <CursorPos X="21" Y="208"/>
+        <UsageCount Value="56"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="C:\codetyphon\lazarus\components\pl_Indy\source\base\IdDNSCommon.pas"/>
+        <UnitName Value="IdDNSCommon"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1839"/>
+        <CursorPos X="3" Y="1817"/>
+        <UsageCount Value="10"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="iphlp.pas"/>
+        <UnitName Value="iphlp"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="31"/>
+        <CursorPos X="18" Y="47"/>
+        <UsageCount Value="10"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\winunits-jedi\src\jwaiphlpapi.pas"/>
+        <UnitName Value="JwaIpHlpApi"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="331"/>
+        <CursorPos X="38" Y="349"/>
+        <UsageCount Value="3"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="uadapterinfo.pas"/>
+        <UnitName Value="uAdapterInfo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="108"/>
+        <CursorPos X="35" Y="95"/>
+        <UsageCount Value="9"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="networkadapterinfo.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="NetworkAdapterInfo"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="108"/>
+        <CursorPos X="10" Y="94"/>
+        <UsageCount Value="149"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\winunits-jedi\src\jwaiprtrmib.pas"/>
+        <UnitName Value="JwaIpRtrMib"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="77"/>
+        <CursorPos X="1" Y="77"/>
+        <UsageCount Value="3"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="C:\codetyphon\lazarus\components\pl_Indy\source\base\IdUDPClient.pas"/>
+        <UnitName Value="IdUDPClient"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="304"/>
+        <CursorPos X="1" Y="315"/>
+        <UsageCount Value="2"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="C:\codetyphon\lazarus\components\lazutils\fileutil.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="315"/>
+        <CursorPos X="3" Y="317"/>
+        <UsageCount Value="3"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="C:\codetyphon\lazarus\components\pl_Indy\source\base\IdIDN.pas"/>
+        <UnitName Value="IdIDN"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="252"/>
+        <CursorPos X="1" Y="268"/>
+        <UsageCount Value="3"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\fcl-registry\src\winreg.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="143"/>
+        <CursorPos X="3" Y="151"/>
+        <UsageCount Value="1"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\win\wininc\defines.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="3087"/>
+        <CursorPos X="6" Y="3106"/>
+        <UsageCount Value="3"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\win\sysutils.pp"/>
+        <UnitName Value="sysutils"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="51"/>
+        <CursorPos X="17" Y="59"/>
+        <UsageCount Value="3"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\inc\objpash.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="104"/>
+        <CursorPos X="10" Y="129"/>
+        <UsageCount Value="1"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\sysutils.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="705"/>
+        <CursorPos X="3" Y="711"/>
+        <UsageCount Value="1"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\winunits-jedi\src\jwaiptypes.pas"/>
+        <UnitName Value="JwaIpTypes"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="145"/>
+        <CursorPos X="6" Y="116"/>
+        <UsageCount Value="3"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="C:\codetyphon\fpcsrc\packages\fcl-db\src\base\db.pas"/>
+        <UnitName Value="db"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1836"/>
+        <CursorPos X="15" Y="1858"/>
+        <UsageCount Value="3"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\datih.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="104"/>
+        <CursorPos X="10" Y="123"/>
+        <UsageCount Value="3"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\dati.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="312"/>
+        <CursorPos X="51" Y="331"/>
+        <UsageCount Value="3"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\sysinth.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="29"/>
+        <CursorPos X="3" Y="33"/>
+        <UsageCount Value="3"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="C:\codetyphon\lazarus\components\pl_Indy\source\base\IdExceptionCore.pas"/>
+        <UnitName Value="IdExceptionCore"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="73"/>
+        <CursorPos X="21" Y="87"/>
+        <UsageCount Value="10"/>
+      </Unit42>
+    </Units>
+    <JumpHistory Count="0" HistoryIndex="-1"/>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="..\wapt-get"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <UnitOutputDirectory Value="lib"/>
+    </SearchPaths>
+    <CodeGeneration>
+      <Checks>
+        <RangeChecks Value="True"/>
+        <OverflowChecks Value="True"/>
+      </Checks>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <StripSymbols Value="True"/>
+        <UseExternalDbgSyms Value="True"/>
+      </Debugging>
+      <LinkSmart Value="True"/>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="8">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsGlobal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\lazarus\fpc\2.6.0\source\packages\paszlib\src\zipper.pp"/>
+        <Line Value="1757"/>
+      </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsGlobal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\lazarus\fpc\2.6.0\source\packages\paszlib\src\zipper.pp"/>
+        <Line Value="1853"/>
+      </Item2>
+      <Item3>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\codetyphon\fpcsrc\rtl\objpas\objpas.pp"/>
+        <Line Value="230"/>
+      </Item3>
+      <Item4>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\fina.inc"/>
+        <Line Value="36"/>
+      </Item4>
+      <Item5>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\codetyphon\fpcsrc\rtl\inc\ustrings.inc"/>
+        <Line Value="2003"/>
+      </Item5>
+      <Item6>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="tisstrings.pas"/>
+        <Line Value="47"/>
+      </Item6>
+      <Item7>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\codetyphon\fpcsrc\packages\fcl-registry\src\winreg.inc"/>
+        <Line Value="151"/>
+      </Item7>
+      <Item8>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="waptcommon.pas"/>
+        <Line Value="485"/>
+      </Item8>
+    </BreakPoints>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+  <EditorMacros Count="0"/>
+</CONFIG>

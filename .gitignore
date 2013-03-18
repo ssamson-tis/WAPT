@@ -1,0 +1,17 @@
+*.dbg
+.svn
+*.pyc
+*.~*
+cache/
+db/
+*.compiled
+utils/
+trash/
+wapt-get/lib
+wapt-get/test
+wapttray/lib
+waptservice/lib
+waptserviceapp/lib
+/*.log
+
+/appwaptservice.exe
