@@ -21,7 +21,6 @@ type
     ActUpgrade: TAction;
     ActionList1: TActionList;
     MenuItem6: TMenuItem;
-    sysinfo: TMemo;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem4: TMenuItem;

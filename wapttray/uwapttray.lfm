@@ -1,11 +1,9 @@
 object VisWAPTTray: TVisWAPTTray
-  Left = 355
-  Height = 258
-  Top = 486
-  Width = 332
+  Left = 99
+  Height = 261
+  Top = 409
+  Width = 319
   Caption = 'Gestion logiciels WAPT'
-  ClientHeight = 258
-  ClientWidth = 332
   Icon.Data = {
     220D000000000100010020210000010018000C0D000016000000280000002000
     0000420000000100180000000000000000004800000048000000000000000000
@@ -118,16 +116,6 @@ object VisWAPTTray: TVisWAPTTray
   OnShow = FormShow
   LCLVersion = '1.1'
   WindowState = wsMinimized
-  object sysinfo: TMemo
-    Left = 24
-    Height = 153
-    Top = 96
-    Width = 288
-    Lines.Strings = (
-      'sysinfo'
-    )
-    TabOrder = 0
-  end
   object TrayIcon1: TTrayIcon
     BalloonHint = 'WAPT Service'
     BalloonTitle = 'WAPT Service'
@@ -244,12 +232,12 @@ object VisWAPTTray: TVisWAPTTray
     Visible = True
     OnClick = TrayIcon1Click
     OnDblClick = TrayIcon1DblClick
-    left = 120
-    top = 24
+    left = 80
+    top = 19
   end
   object PopupMenu1: TPopupMenu
-    left = 184
-    top = 24
+    left = 144
+    top = 19
     object MenuItem6: TMenuItem
       Action = ActShowStatus
       Default = True
@@ -268,8 +256,8 @@ object VisWAPTTray: TVisWAPTTray
     end
   end
   object ActionList1: TActionList
-    left = 248
-    top = 24
+    left = 208
+    top = 19
     object ActUpgrade: TAction
       Caption = 'Installer les mises à jour'
       OnExecute = ActUpgradeExecute
@@ -298,7 +286,7 @@ object VisWAPTTray: TVisWAPTTray
   object Timer1: TTimer
     Interval = 30000
     OnTimer = Timer1Timer
-    left = 56
-    top = 21
+    left = 16
+    top = 16
   end
 end
