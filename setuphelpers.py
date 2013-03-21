@@ -21,7 +21,7 @@
 #
 # -----------------------------------------------------------------------
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 import os
 import sys
@@ -637,6 +637,7 @@ def register_dll(dllpath):
     """Register a COM/OLE server DLL in registry (similar to regsvr32)"""
     dll = ctypes.windll[dllpath]
     result = dll.DllRegisterServer()
+    logger.info('DLL %s registered' % dllpath)
     if result:
         raise Exception('Register DLL %s failed, code %i' % (dllpath,result))
 
@@ -644,8 +645,16 @@ def unregister_dll(dllpath):
     """Unregister a COM/OLE server DLL from registry"""
     dll = ctypes.windll[dllpath]
     result = dll.DllUnregisterServer()
+    logger.info('DLL %s unregistered' % dllpath)
     if result:
         raise Exception('Unregister DLL %s failed, code %i' % (dllpath,result))
+
+class EWaptSetupException(Exception):
+    pass
+
+def error(reason):
+    """Raise a fatal error"""
+    raise EWaptSetupException('Fatal error : %s' % reason)
 
 # to help pyscripter code completion in setup.py
 params = {}
