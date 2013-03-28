@@ -56,8 +56,9 @@ import win32api
 from _winreg import HKEY_LOCAL_MACHINE,EnumKey,OpenKey,QueryValueEx,EnableReflectionKey,DisableReflectionKey,QueryReflectionKey,QueryInfoKey,KEY_READ,KEY_WOW64_32KEY,KEY_WOW64_64KEY
 
 import re
-
 import setuphelpers
+
+__version__ = "0.0.1"
 
 logger = logging.getLogger()
 
@@ -495,12 +496,47 @@ def tryurl(url):
         logger.debug('  Not available : %s' % e)
         return False
 
-PackageKey = namedtuple('Package',('packagename','version'))
+PackageKey = namedtuple('package',('packagename','version'))
 
-class WaptDB:
+# tables : old_table_name:[newtablename,{dict of changed field names}]
+db_upgrades = {
+ ('0000','20130327'):{
+        'wapt_localstatus':['wapt_localstatus',{
+            'Package':'package',
+            'Version':'version',
+            'Architecture':'architecture',
+            'InstallDate':'install_date',
+            'InstallStatus':'install_status',
+            'InstallOutput':'install_output',
+            'InstallParams':'install_params',
+            'UninstallString':'uninstall_string',
+            'UninstallKey':'uninstall_key',
+            }],
+        'wapt_repo':['wapt_package',{
+            'Package':'package',
+            'Version':'version',
+            'Architecture':'architecture',
+            'Section':'section',
+            'Priority':'priority',
+            'Maintainer':'maintainer',
+            'Description':'description',
+            'Filename':'filename',
+            'Size':'size',
+            'MD5sum':'md5sum',
+            'Depends':'depends',
+            'Sources':'sources',
+            }],
+        }
+    }
+
+
+
+class WaptDB(object):
     """Class to manage SQLite database with local installation status"""
     dbpath = ''
     db = None
+
+    curr_db_version = '20130327'
 
     def __init__(self,dbpath):
         self.dbpath = dbpath
@@ -529,78 +565,112 @@ class WaptDB:
             logger.critical('DB error %s, rollbacking\n' % (value,))
 
     def upgradedb(self):
+        """Update local database structure to current version if rules are described in db_upgrades"""
         try:
+            backupfn = ''
+            old_structure_version = self.db_version
+            if old_structure_version >= self.curr_db_version:
+                logger.critical('upgrade db aborted : current structure version %s is newer or equal to requested structure version %s' % (old_structure_version,self.curr_db_version))
+                return (old_structure_version,old_structure_version)
+
+            if not (old_structure_version,self.curr_db_version) in db_upgrades:
+                raise Exception('Unable to upgrade DB from version %s to version %s, no rules' % (old_structure_version,self.curr_db_version))
             logger.info('Upgrade database schema')
-            old_datas = {}
-            tables = ['wapt_localstatus','wapt_repo']
+            # we will backup old data in a file so that we can rollback
             backupfn = os.path.join(os.path.dirname(self.dbpath),time.strftime('%Y%m%d-%H%M%S')+'.sqlite')
             logger.debug(' copy old data to %s' % backupfn)
             shutil.copy(self.dbpath,backupfn)
+
+            # we will backup old data in dictionaries to convert them to new structure
             logger.debug(' backup data in memory')
+            old_datas = {}
+            tables = [ c[0] for c in self.db.execute('SELECT name FROM sqlite_master WHERE type = "table" and name like "wapt_%"').fetchall()]
             for tablename in tables:
                 old_datas[tablename] = self.query('select * from %s' % tablename)
                 logger.debug(' %s table : %i records' % (tablename,len(old_datas[tablename])))
+
             logger.debug(' drop tables')
             for tablename in tables:
                 self.db.execute('drop table if exists %s' % tablename)
+
+            # create new empty structure
             logger.debug(' recreates new tables ')
-            self.initdb()
+            new_structure_version = self.initdb()
+
+            # append old data in new tables
             logger.debug(' fill with old data')
             for tablename in tables:
                 if old_datas[tablename]:
-                    columns = [ c[0] for c in self.db.execute('select * from %s limit 0' % tablename).description if c[0] in old_datas[tablename][0] ]
-                    insquery = "insert into %s (%s) values (%s)" % (tablename,",".join(columns),",".join("?" * len(columns)))
+                    logger.debug(' process table %s' % tablename)
+                    # get rules from db_upgrades dict
+                    (newtablename,newfieldnames) = db_upgrades[(old_structure_version,new_structure_version)].get(tablename,[tablename,{}])
+
+                    allnewcolumns = [ c[0] for c in self.db.execute('select * from %s limit 0' % newtablename).description]
+                    # take only old columns which match a new column in new structure
+                    oldcolumns = [ k for k in old_datas[tablename][0].keys() if newfieldnames.get(k,k) in allnewcolumns ]
+                    logger.debug(' old columns %s' % (oldcolumns,))
+                    newcolumns = [ newfieldnames.get(k,k) for k in oldcolumns ]
+                    logger.debug(' new columns %s' % (newcolumns,))
+
+                    insquery = "insert into %s (%s) values (%s)" % (newtablename,",".join(newcolumns),",".join("?" * len(newcolumns)))
                     for rec in old_datas[tablename]:
-                        logger.debug(' %s' %[ rec[columns[i]] for i in range(0,len(columns))])
-                        self.db.execute(insquery,[ rec[columns[i]] for i in range(0,len(columns))] )
+                        print rec
+                        logger.debug(' %s' %[ rec[oldcolumns[i]] for i in range(0,len(oldcolumns))])
+                        self.db.execute(insquery,[ rec[oldcolumns[i]] for i in range(0,len(oldcolumns))] )
+
+            # be sure to put back new version in table as db upgrade has put the old value in table
+            self.db_version = new_structure_version
             self.db.commit()
+            return (old_structure_version,new_structure_version)
         except Exception,e:
             self.db.rollback()
-            logger.critical("UpgradeDB ERROR : %s, copy back backup database %s" % (e,backupfn))
-            shutil.copy(backupfn,self.dbpath)
+            if backupfn:
+                logger.critical("UpgradeDB ERROR : %s, copy back backup database %s" % (e,backupfn))
+                shutil.copy(backupfn,self.dbpath)
             raise
 
     def initdb(self):
+        """Initialize curretn sqlite db with empty table and return structure version"""
         assert(isinstance(self.db,sqlite3.Connection))
-        logger.debug('Initialize stat database')
+        logger.debug('Initialize Wapt database')
         self.db.execute("""
-        create table wapt_repo (
+        create table wapt_package (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          Package varchar(255),
-          Version varchar(255),
-          Architecture varchar(255),
-          Section varchar(255),
-          Priority varchar(255),
-          Maintainer varchar(255),
-          Description varchar(255),
-          Filename varchar(255),
-          Size integer,
-          MD5sum varchar(255),
-          Depends varchar(800),
-          Sources varchar(255),
+          package varchar(255),
+          version varchar(255),
+          architecture varchar(255),
+          section varchar(255),
+          priority varchar(255),
+          maintainer varchar(255),
+          description varchar(255),
+          filename varchar(255),
+          size integer,
+          md5sum varchar(255),
+          depends varchar(800),
+          sources varchar(255),
           repo_url varchar(255)
           )"""
                         )
         self.db.execute("""
-        create index idx_package_name on wapt_repo(Package);""")
+        create index idx_package_name on wapt_package(package);""")
 
         self.db.execute("""
         create table wapt_localstatus (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          Package varchar(255),
-          Version varchar(255),
-          Architecture varchar(255),
-          InstallDate varchar(255),
-          InstallStatus varchar(255),
-          InstallOutput TEXT,
-          InstallParams VARCHAR(800),
-          UninstallString varchar(255),
-          UninstallKey varchar(255),
+          package varchar(255),
+          version varchar(255),
+          architecture varchar(255),
+          install_date varchar(255),
+          install_status varchar(255),
+          install_output TEXT,
+          install_params VARCHAR(800),
+          uninstall_string varchar(255),
+          uninstall_key varchar(255),
           setuppy TEXT
           )"""
                         )
         self.db.execute("""
-        create index idx_localstatus_name on wapt_localstatus(Package);""")
+        create index idx_localstatus_name on wapt_localstatus(package);""")
 
         self.db.execute("""
         create table if not exists wapt_params (
@@ -614,10 +684,43 @@ class WaptDB:
           create unique index if not exists idx_params_name on wapt_params(name);
           """)
 
+        self.db.execute("""
+            CREATE TABLE wapt_action (
+                id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+                action varchar(16),
+                state varchar(16),
+                current_step varchar(255),
+                start_date varchar(255),
+                finish_date varchar(255),
+                package_name varchar(255),
+                package_version_min varchar(255),
+                package_version_max varchar(255),
+                rundate_min varchar(255),
+                rundate_max varchar(255),
+                created_date varchar(255),
+                run_params VARCHAR(800),
+                run_output TEXT
+            );
+                """)
+
+        self.db.execute("""
+          create index if not exists idx_action_state on wapt_action(state);
+          """)
+
+        self.db.execute("""
+          create index if not exists idx_action_package_name on wapt_action(package_name);
+          """)
+
+        return self.curr_db_version
+
     @property
     def db_version(self):
         try:
-            return self.db.execute('select value from wapt_params where name="db_version"').fetchone()[0]
+            val = self.db.execute('select value from wapt_params where name="db_version"').fetchone()
+            if val:
+                return val[0]
+            else:
+                return '0000'
         except Exception,e:
             logger.critical('Unable to get DB version (%s), upgrading' % e)
             self.db.rollback()
@@ -629,12 +732,24 @@ class WaptDB:
     @db_version.setter
     def db_version(self,value):
         try:
-            self.db.execute('insert or replace into wapt_params(name,value,create_date) values (?,?,?)',('db_version',value,datetime2isodate()))
+            self.db.execute('insert or ignore into wapt_params(name,value,create_date) values (?,?,?)',('db_version',value,datetime2isodate()))
+            self.db.execute('update wapt_params set value=?,create_date=? where name=?',(value,datetime2isodate(),'db_version'))
             self.db.commit()
         except:
             logger.critical('Unable to set version, upgrading')
             self.db.rollback()
             self.upgradedb()
+
+    @db_version.deleter
+    def db_version(self):
+        try:
+            self.db.execute("delete from wapt_params where name = 'db_version'")
+            self.db.commit()
+        except:
+            logger.critical('Unable to delete version, upgrading')
+            self.db.rollback()
+            self.upgradedb()
+
 
     def set_param(self,name,value):
         try:
@@ -645,91 +760,99 @@ class WaptDB:
             self.db.rollback()
 
     def get_param(self,name,default=None):
-        try:
-            return self.db.execute('select value from wapt_params where name=?',name).fetchone()[0]
-        except Exception,e:
+        q = self.db.execute('select value from wapt_params where name=?',(name,)).fetchone()
+        if q:
+            return q[0]
+        else:
             return default
 
     def add_package(self,
-                    Package='',
-                    Version='',
-                    Section='',
-                    Priority='',
-                    Architecture='',
-                    Maintainer='',
-                    Description='',
-                    Filename='',
-                    Size='',
-                    MD5sum='',
-                    Depends='',
-                    Sources='',
+                    package='',
+                    version='',
+                    section='',
+                    priority='',
+                    architecture='',
+                    maintainer='',
+                    description='',
+                    filename='',
+                    size='',
+                    md5sum='',
+                    depends='',
+                    sources='',
                     repo_url=''):
 
         cur = self.db.execute("""\
-              insert into wapt_repo (
-                Package,
-                Version,
-                Section,
-                Priority,
-                Architecture,
-                Maintainer,
-                Description,
-                Filename,
-                Size,
-                MD5sum,
-                Depends,
-                Sources,
+              insert into wapt_package (
+                package,
+                version,
+                section,
+                priority,
+                architecture,
+                maintainer,
+                description,
+                filename,
+                size,
+                md5sum,
+                depends,
+                sources,
                 repo_url) values (?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,(
-                 Package,
-                 Version,
-                 Section,
-                 Priority,
-                 Architecture,
-                 Maintainer,
-                 Description,
-                 Filename,
-                 Size,
-                 MD5sum,
-                 Depends,
-                 Sources,
+                 package,
+                 version,
+                 section,
+                 priority,
+                 architecture,
+                 maintainer,
+                 description,
+                 filename,
+                 size,
+                 md5sum,
+                 depends,
+                 sources,
                  repo_url)
                )
 
         return cur.lastrowid
 
     def add_package_entry(self,package_entry):
-        cur = self.db.execute("""delete from wapt_repo where Package=? and Version=?""" ,(package_entry.Package,package_entry.Version))
+        cur = self.db.execute("""delete from wapt_package where package=? and version=?""" ,(package_entry.package,package_entry.version))
 
-        self.add_package(package_entry.Package,
-                         package_entry.Version,
-                         package_entry.Section,
-                         package_entry.Priority,
-                         package_entry.Architecture,
-                         package_entry.Maintainer,
-                         package_entry.Description,
-                         package_entry.Filename,
-                         package_entry.Size,
-                         package_entry.MD5sum,
-                         package_entry.Depends,
-                         package_entry.Sources,
+        self.add_package(package_entry.package,
+                         package_entry.version,
+                         package_entry.section,
+                         package_entry.priority,
+                         package_entry.architecture,
+                         package_entry.maintainer,
+                         package_entry.description,
+                         package_entry.filename,
+                         package_entry.size,
+                         package_entry.md5sum,
+                         package_entry.depends,
+                         package_entry.sources,
                          package_entry.repo_url)
 
 
-    def add_start_install(self,package,version,architecture,params_dict={}):
-        """Register the start of installation in local db"""
+    def add_start_install(self,package,version,architecture,params_dict={},setuppy=None):
+        """Register the start of installation in local db
+            params_dict is the dictionary pf parameters provided on command line with --params
+              or by the server
+            setuppy is the python source code used for install, uninstall or session_setup
+              code used for uninstall or session_setup must use only wapt self library as
+              package content is not longer available at this step.
+        """
         try:
-            cur = self.db.execute("""delete from wapt_localstatus where Package=?""" ,(package,))
+            cur = self.db.execute("""delete from wapt_localstatus where package=?""" ,(package,))
             cur = self.db.execute("""\
                   insert into wapt_localstatus (
-                    Package,
-                    Version,
-                    Architecture,
-                    InstallDate,
-                    InstallStatus,
-                    InstallOutput,
-                    InstallParams
-                    ) values (?,?,?,?,?,?,?)
+                    package,
+                    version,
+                    architecture,
+                    install_date,
+                    install_status,
+                    install_output,
+                    install_params,
+                    setuppy
+                    ) values (?,?,?,?,?,?,?,?)
                 """,(
                      package,
                      version,
@@ -738,23 +861,24 @@ class WaptDB:
                      'INIT',
                      '',
                      json.dumps(params_dict),
+                     setuppy,
                    ))
         finally:
             self.db.commit()
         return cur.lastrowid
 
-    def update_install_status(self,rowid,installstatus,installoutput,uninstallkey=None,uninstallstring=None,):
+    def update_install_status(self,rowid,install_status,install_output,uninstall_key=None,uninstall_string=None,):
         """Update status of package installation on localdb"""
         try:
             cur = self.db.execute("""\
                   update wapt_localstatus
-                    set InstallStatus=?,InstallOutput = InstallOutput || ?,UninstallKey=?,UninstallString=?
+                    set install_status=?,install_output = install_output || ?,uninstall_key=?,uninstall_string=?
                     where rowid = ?
                 """,(
-                     installstatus,
-                     installoutput,
-                     uninstallkey,
-                     uninstallstring,
+                     install_status,
+                     install_output,
+                     uninstall_key,
+                     uninstall_string,
                      rowid,
                      )
                    )
@@ -765,7 +889,7 @@ class WaptDB:
     def remove_install_status(self,package):
         """Remove status of package installation from localdb"""
         try:
-            cur = self.db.execute("""delete from wapt_localstatus where Package=?""" ,(package,))
+            cur = self.db.execute("""delete from wapt_localstatus where package=?""" ,(package,))
         finally:
             self.db.commit()
         return cur.lastrowid
@@ -773,7 +897,7 @@ class WaptDB:
     def known_packages(self):
         """return a list of all (package,version)"""
         q = self.db.execute("""\
-              select distinct wapt_repo.Package,wapt_repo.Version from wapt_repo
+              select distinct wapt_package.package,wapt_package.version from wapt_package
            """)
         return [PackageKey(*e) for e in q.fetchall()]
 
@@ -783,7 +907,7 @@ class WaptDB:
         if pcv_match:
             pcv = pcv_match.groupdict()
             q = self.query_package_entry("""\
-                  select * from wapt_repo where Package = ?
+                  select * from wapt_package where package = ?
                """, (pcv['package'],))
             result = [ p for p in q if p.match(package_cond)]
             result.sort()
@@ -800,22 +924,22 @@ class WaptDB:
             search = ['1=1']
         else:
             words = [ "%"+w.lower()+"%" for w in searchwords ]
-            search = ["lower(Description || Package) like ?"] *  len(words)
-        result = self.query_package_entry("select * from wapt_repo where %s" % " and ".join(search),words)
+            search = ["lower(description || package) like ?"] *  len(words)
+        result = self.query_package_entry("select * from wapt_package where %s" % " and ".join(search),words)
         result.sort()
         return result
 
     def installed(self):
         """Return a dictionary of installed packages : keys=package,version, values = package dict """
         q = self.query_package_entry("""\
-              select l.InstallDate,l.InstallStatus,l.InstallOutput,l.InstallParams,
+              select l.install_date,l.install_status,l.install_output,l.install_params,
                 r.* from wapt_localstatus l
-                left join wapt_repo r on r.Package=l.Package and l.Version=r.Version and (l.Architecture is Null or l.Architecture=r.Architecture)
-              where l.InstallStatus in ("OK","UNKNOWN")
+                left join wapt_package r on r.package=l.package and l.version=r.version and (l.architecture is null or l.architecture=r.architecture)
+              where l.install_status in ("OK","UNKNOWN")
            """)
         result = {}
         for p in q:
-            result[p.Package]= p
+            result[p.package]= p
         return result
 
     def installed_search(self,searchwords=[]):
@@ -827,26 +951,26 @@ class WaptDB:
             search = ['1=1']
         else:
             words = [ "%"+w.lower()+"%" for w in searchwords ]
-            search = ["lower(r.Description || r.Package) like ?"] *  len(words)
+            search = ["lower(r.description || r.package) like ?"] *  len(words)
         q = self.query_package_entry("""\
-              select l.InstallDate,l.InstallStatus,l.InstallOutput,l.InstallParams,
+              select l.install_date,l.install_status,l.install_output,l.install_params,
                 r.* from wapt_localstatus l
-                left join wapt_repo r on r.Package=l.Package and l.Version=r.Version and (l.Architecture is Null or l.Architecture=r.Architecture)
-              where l.InstallStatus in ("OK","UNKNOWN") and %s
+                left join wapt_package r on r.package=l.package and l.version=r.version and (l.architecture is null or l.architecture=r.architecture)
+              where l.install_status in ("OK","UNKNOWN") and %s
            """ % " and ".join(search),words)
         result = {}
         for p in q:
-            result[p.Package]= p
+            result[p.package]= p
         return result
 
     def installed_matching(self,package_cond):
         """Return True if one installed package match te package condition 'tis-package (>=version)' """
         package = REGEX_PACKAGE_CONDITION.match(package_cond).groupdict()['package']
         q = self.query_package_entry("""\
-              select l.InstallDate,l.InstallStatus,l.InstallOutput,l.InstallParams,
+              select l.install_date,l.install_status,l.install_output,l.install_params,
                 r.* from wapt_localstatus l
-                left join wapt_repo r on r.Package=l.Package and l.Version=r.Version and (l.Architecture is Null or l.Architecture=r.Architecture)
-              where l.Package=? and l.InstallStatus in ("OK","UNKNOWN")
+                left join wapt_package r on r.package=l.package and l.version=r.version and (l.architecture is null or l.architecture=r.architecture)
+              where l.package=? and l.install_status in ("OK","UNKNOWN")
            """,(package,))
         return q[0] if q and q[0].match(package_cond) else None
 
@@ -855,22 +979,22 @@ class WaptDB:
         result = {}
         allinstalled = self.installed().values()
         for p in allinstalled:
-            available = self.query_package_entry("""select * from wapt_repo where Package=?""",(p.Package,))
+            available = self.query_package_entry("""select * from wapt_package where package=?""",(p.package,))
             available.sort()
             available.reverse()
             if available and available[0] > p:
-                result[p.Package] = available
+                result[p.package] = available
         return result
 
     def update_repos_list(url_list):
         """Cleanup all"""
         try:
             logger.debug('Purge packages table')
-            self.db.execute('delete from wapt_repo where repo_url not in (%s)' % (','.join('"%s"'% url for url in url_list,)))
+            self.db.execute('delete from wapt_package where repo_url not in (%s)' % (','.join('"%s"'% url for url in url_list,)))
             self.db.commit()
             for url in url_list:
                 self.update_packages_list(url)
-            logger.debug('Commit wapt_repo updates')
+            logger.debug('Commit wapt_package updates')
         except:
             logger.debug('rollback delete table')
             self.db.rollback()
@@ -887,18 +1011,18 @@ class WaptDB:
                 ).read(name='Packages'),'UTF-8').splitlines()
 
             logger.debug('Purge packages table')
-            self.db.execute('delete from wapt_repo where repo_url=?',(repourl,))
+            self.db.execute('delete from wapt_package where repo_url=?',(repourl,))
             startline = 0
             endline = 0
             def add(start,end):
                 if start <> end:
-                    package = Package_Entry()
+                    package = PackageEntry()
                     package.load_control_from_wapt(packageListFile[start:end])
-                    logger.info("%s (%s)" % (package.Package,package.Version))
+                    logger.info("%s (%s)" % (package.package,package.version))
                     logger.debug(package)
                     package.repo_url = repourl
                     self.add_package_entry(package)
-                    result.append((package.Package,package.Version))
+                    result.append((package.package,package.version))
 
             for line in packageListFile:
                 if line.strip()=='':
@@ -911,11 +1035,11 @@ class WaptDB:
             # last one
             add(startline,endline)
 
-            logger.debug('Commit wapt_repo updates')
+            logger.debug('Commit wapt_package updates')
             self.db.commit()
             return result
         except:
-            logger.debug('rollback delete repo')
+            logger.debug('rollback delete package')
             self.db.rollback()
             raise
 
@@ -941,7 +1065,7 @@ class WaptDB:
                         raise Exception('Package %s not available' % package)
                     # get depends of the most recent matching entry
                     # TODO : use another older if this can limit the number of packages to install !
-                    depends = [s.strip() for s in entries[-1].Depends.split(',') if s.strip()<>'']
+                    depends = [s.strip() for s in entries[-1].depends.split(',') if s.strip()<>'']
                     for d in depends:
                         alldepends.extend(dodepends(explored,depends,depth))
                         if not d in alldepends:
@@ -955,7 +1079,7 @@ class WaptDB:
 
     def package_entry_from_db(self,package,version_min='',version_max=''):
         """Return the most recent package entry given its packagename and minimum and maximum version"""
-        result = Package_Entry()
+        result = PackageEntry()
         filter = ""
         if version_min is None:
             version_min=""
@@ -964,9 +1088,9 @@ class WaptDB:
 
 
         if not version_min and not version_max:
-            entries = self.query("""select * from wapt_repo where Package = ? order by version desc limit 1""",(package,))
+            entries = self.query("""select * from wapt_package where package = ? order by version desc limit 1""",(package,))
         else:
-            entries = self.query("""select * from wapt_repo where Package = ? and (version>=? or ?="") and (version<=? or ?="") order by version desc limit 1""",
+            entries = self.query("""select * from wapt_package where package = ? and (version>=? or ?="") and (version<=? or ?="") order by version desc limit 1""",
                 (package,version_min,version_min,version_max,version_max))
         if not entries:
             raise Exception('Package %s (min : %s, max %s) not found in local DB, please update' % (package,version_min,version_max))
@@ -985,15 +1109,15 @@ class WaptDB:
 
     def query_package_entry(self,query, args=(), one=False):
         """
-        execute la requete query sur la db et renvoie un tableau de Package_Entry
+        execute la requete query sur la db et renvoie un tableau de PackageEntry
         Le matching est fait sur le nom de champs.
-            Les champs qui ne matchent pas un attribut de Package_Entry
+            Les champs qui ne matchent pas un attribut de PackageEntry
                 sont également mis en attributs !
         """
         result = []
         cur = self.db.execute(query, args)
         for row in cur.fetchall():
-            pe = Package_Entry()
+            pe = PackageEntry()
             rec_dict = dict((cur.description[idx][0], value) for idx, value in enumerate(row))
             for k in rec_dict:
                 setattr(pe,k,rec_dict[k])
@@ -1006,7 +1130,7 @@ class WaptDB:
 
 
 ######################"""
-class Wapt:
+class Wapt(object):
     """Global WAPT engine"""
     def __init__(self,config=None,defaults=None):
         """Initialize engine with a configParser instance (inifile) and other defaults in a dictionary
@@ -1054,6 +1178,9 @@ class Wapt:
     def waptdb(self):
         if not self._waptdb:
             self._waptdb = WaptDB(dbpath=self.dbpath)
+            if self._waptdb.db_version < self._waptdb.curr_db_version:
+                logger.info('Upgrading db structure from %s to %s' % (self._waptdb.db_version,self._waptdb.curr_db_version))
+                self._waptdb.upgradedb()
         return self._waptdb
 
     @property
@@ -1099,6 +1226,8 @@ class Wapt:
         if dnsdomain and dnsdomain <> '.':
             # find by dns SRV _wapt._tcp
             try:
+                resolv = dns.resolver.get_default_resolver()
+                logger.debug('DNS server %s' % (resolv.nameservers,))
                 logger.debug('Trying _wapt._tcp.%s SRV records' % dnsdomain)
                 answers = dns.resolver.query('_wapt._tcp.%s.' % dnsdomain,'SRV')
                 working_url = []
@@ -1152,6 +1281,24 @@ class Wapt:
                         return url
                 if not answers:
                     logger.debug('  No wapt.%s CNAME SRV record found' % dnsdomain)
+
+            except dns.exception.DNSException,e:
+                logger.warning('  DNS resolver error : %s' % (e,))
+
+            # find by dns A
+            try:
+                wapthost = 'wapt.%s.' % dnsdomain
+                logger.debug('Trying %s A records' % wapthost)
+                answers = dns.resolver.query(wapthost,'A')
+                if answers:
+                    url = 'https://%s/wapt' % (wapthost,)
+                    if tryurl(url+'/Packages'):
+                        return url
+                    url = 'http://%s/wapt' % (wapthost,)
+                    if tryurl(url+'/Packages'):
+                        return url
+                if not answers:
+                    logger.debug('  No %s A record found' % wapthost)
 
             except dns.exception.DNSException,e:
                 logger.warning('  DNS resolver error : %s' % (e,))
@@ -1250,7 +1397,7 @@ class Wapt:
         if not public_cert and not self.allow_unsigned:
             raise Exception('No public Key provided for package signature checking, and unsigned packages install is not allowed')
         previous_uninstall = self.registry_uninstall_snapshot()
-        entry = Package_Entry()
+        entry = PackageEntry()
         entry.load_control_from_wapt(fname)
         old_stdout = sys.stdout
         old_stderr = sys.stderr
@@ -1259,10 +1406,10 @@ class Wapt:
         oldpath = sys.path
 
         install_id = None
-        install_id = self.waptdb.add_start_install(entry.Package ,entry.Version,entry.Architecture)
+        install_id = self.waptdb.add_start_install(entry.package ,entry.version,entry.architecture)
         # we setup a redirection of stdout to catch print output from install scripts
-        sys.stderr = sys.stdout = installoutput = LogInstallOutput(sys.stdout,self.waptdb,install_id)
-        hdlr = logging.StreamHandler(installoutput)
+        sys.stderr = sys.stdout = install_output = LogInstallOutput(sys.stdout,self.waptdb,install_id)
+        hdlr = logging.StreamHandler(install_output)
         hdlr.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
         if logger.handlers:
             old_hdlr = logger.handlers[0]
@@ -1303,7 +1450,8 @@ class Wapt:
                         raise Exception('Package does not contain a signature, and unsigned packages install is not allowed')
 
                 manifest = json.loads(manifest_data)
-                if self.check_files_sha1(packagetempdir,manifest):
+                errors = self.check_files_sha1(packagetempdir,manifest)
+                if errors:
                     raise Exception('Files corrupted, SHA1 not matching for %s' % (errors,))
             else:
                 if not self.allow_unsigned:
@@ -1350,6 +1498,9 @@ class Wapt:
                 except Exception,e:
                     logger.critical('Fatal error in install script: %s' % e)
                     raise
+            else:
+                logger.warning('Dry run, not actually running setup.install()')
+                exitstatus = None
 
             if exitstatus is None or exitstatus == 0:
                 status = 'OK'
@@ -1375,10 +1526,22 @@ class Wapt:
             if istemporary:
                 os.chdir(previous_cwd)
                 logger.debug("Cleaning package tmp dir")
-                shutil.rmtree(packagetempdir)
+                # trying 3 times to remove
+                cnt = 3
+                while cnt>0:
+                    try:
+                        shutil.rmtree(packagetempdir)
+                        break
+                    except:
+                        cnt -= 1
+                        time.sleep(2)
+                else:
+                    logger.warning("Unable to clean tmp dir")
+
+
 
             self.waptdb.update_install_status(install_id,status,'',str(new_uninstall_key) if new_uninstall_key else '',str(uninstallstring) if uninstallstring else '')
-            # (entry.Package,entry.Version,status,json.dumps({'output':installoutput.output,'exitstatus':exitstatus}))
+            # (entry.package,entry.version,status,json.dumps({'output':install_output.output,'exitstatus':exitstatus}))
             return status
 
         except Exception,e:
@@ -1421,23 +1584,23 @@ class Wapt:
         if not os.path.isfile(svncmd):
             raise Exception('svn.exe command not available, please install TortoiseSVN with commandline tools')
         if self.config.get('global','default_sources_suffix'):
-            co_dir = os.path.join(self.config.get('global','default_sources_root'),"%s-%s" % (entry.Package,self.config.get('global','default_sources_suffix')))
+            co_dir = os.path.join(self.config.get('global','default_sources_root'),"%s-%s" % (entry.package,self.config.get('global','default_sources_suffix')))
         else:
-            co_dir = os.path.join(self.config.get('default_sources_root',entry.Package))
-        logger.info('sources : %s'% entry.Sources)
+            co_dir = os.path.join(self.config.get('default_sources_root',entry.package))
+        logger.info('sources : %s'% entry.sources)
         logger.info('checkout dir : %s'% co_dir)
-        logger.info(subprocess.check_output('"%s" co "%s" "%s"' % (svncmd,entry.Sources,co_dir)))
+        logger.info(subprocess.check_output('"%s" co "%s" "%s"' % (svncmd,entry.sources,co_dir)))
         return co_dir
 
     def last_install_log(self,packagename):
         """Return a dict {status,log} of the last install of a package"""
         q = self.waptdb.query("""\
-           select InstallStatus,InstallOutput from wapt_localstatus
-            where Package=? order by InstallDate desc limit 1
+           select install_status,install_output from wapt_localstatus
+            where package=? order by install_date desc limit 1
            """ , (packagename,) )
         if not q:
             raise Exception("Package %s not found in local DB status" % packagename)
-        return {"status" : q[0]['InstallStatus'], "log":q[0]['InstallOutput']}
+        return {"status" : q[0]['install_status'], "log":q[0]['install_output']}
 
     def cleanup(self):
         """Remove cached WAPT file from local disk"""
@@ -1557,7 +1720,7 @@ class Wapt:
         packages = [ p[1] for p in to_install ]
 
         downloaded = self.download_packages(packages,usecache=not download_only and usecache)
-        if downloaded['errors']:
+        if downloaded.get('errors',[]):
             raise Exception('Error downloading some files : %s',(downloaded['errors'],))
         actions['downloads'] = downloaded
         logger.debug('Downloaded : %s' % (downloaded,))
@@ -1565,7 +1728,7 @@ class Wapt:
             return os.path.join(self.packagecachedir,packagefilename)
         if not download_only:
             for (request,p) in to_install:
-                result = self.install_wapt(fname(p.Filename),params_dict = params_dict,public_cert=self.get_public_cert())
+                result = self.install_wapt(fname(p.filename),params_dict = params_dict,public_cert=self.get_public_cert())
                 if result<>'OK':
                     actions['errors'].append([request,p])
                     logger.critical('Package %s (%s) not installed due to errors' %(request,p))
@@ -1589,14 +1752,14 @@ class Wapt:
                     packages.append(mp[0])
                 else:
                     raise Exception('Unavailable package %s' % (p,))
-            elif isinstance(p,Package_Entry):
+            elif isinstance(p,PackageEntry):
                 packages.append(p)
             elif isinstance(p,list) or isinstance(p,tuple):
                 packages.append(self.waptdb.package_entry_from_db(p[0],version_min=p[1],version_max=p[1]))
             else:
                 raise Exception('Invalid package request %s' % p)
         for entry in packages:
-            packagefilename = entry.Filename.strip('./')
+            packagefilename = entry.filename.strip('./')
             download_url = entry.repo_url+'/'+packagefilename
             fullpackagepath = os.path.join(self.packagecachedir,packagefilename)
             if os.path.isfile(fullpackagepath) and os.path.getsize(fullpackagepath)>0 and usecache:
@@ -1618,7 +1781,7 @@ class Wapt:
         """Removes a package giving its package name, unregister from local status DB"""
         q = self.waptdb.query("""\
            select * from wapt_localstatus
-            where Package=?
+            where package=?
            """ , (package,) )
         if not q:
             logger.warning("Package %s not installed, aborting" % package)
@@ -1626,15 +1789,15 @@ class Wapt:
 
         # several versions installed of the same package... ?
         for mydict in q:
-            logger.info("Removing package %s version %s from computer..." % (mydict['Package'],mydict['Version']))
-            if mydict['UninstallString']:
-                if mydict['UninstallString'][0] not in ['[','"',"'"]:
-                    guids = mydict['UninstallString']
+            logger.info("Removing package %s version %s from computer..." % (mydict['package'],mydict['version']))
+            if mydict['uninstall_string']:
+                if mydict['uninstall_string'][0] not in ['[','"',"'"]:
+                    guids = mydict['uninstall_string']
                 else:
                     try:
-                        guids = eval(mydict['UninstallString'])
+                        guids = eval(mydict['uninstall_string'])
                     except:
-                        guids = mydict['UninstallString']
+                        guids = mydict['uninstall_string']
                 if isinstance(guids,(unicode,str)):
                     guids = [guids]
                 for guid in guids:
@@ -1645,14 +1808,14 @@ class Wapt:
                         logger.info("Warning : %s" % e)
                 logger.info('Remove status record from local DB')
                 self.waptdb.remove_install_status(package)
-            elif mydict['UninstallKey']:
-                if mydict['UninstallKey'][0] not in ['[','"',"'"]:
-                    guids = mydict['UninstallKey']
+            elif mydict['uninstall_key']:
+                if mydict['uninstall_key'][0] not in ['[','"',"'"]:
+                    guids = mydict['uninstall_key']
                 else:
                     try:
-                        guids = eval(mydict['UninstallKey'])
+                        guids = eval(mydict['uninstall_key'])
                     except:
-                        guids = mydict['UninstallKey']
+                        guids = mydict['uninstall_key']
 
                 if isinstance(guids,(unicode,str)):
                     guids = [guids]
@@ -1756,7 +1919,7 @@ and install all newest packages"""
              # be sure some minimal functions are available in setup module at install step
             logger.debug('Source import OK')
             control_filename = os.path.join(directoryname,'WAPT','control')
-            entry = Package_Entry()
+            entry = PackageEntry()
             if hasattr(setup,'control'):
                 logger.info('Use control informations from setup.py file')
                 entry.load_control_from_dict(setup.control)
@@ -1766,11 +1929,11 @@ and install all newest packages"""
                 logger.info('Use control informations from control file')
                 entry.load_control_from_wapt(directoryname)
             if inc_package_release:
-                current_release = entry.Version.split('-')[-1]
+                current_release = entry.version.split('-')[-1]
                 new_release = "%02i" % (int(current_release) + 1,)
-                new_version = "-".join(entry.Version.split('-')[0:-1]+[new_release])
-                logger.info('Increasing version of package from %s to %s' % (entry.Version,new_version))
-                entry.Version = new_version
+                new_version = "-".join(entry.version.split('-')[0:-1]+[new_release])
+                logger.info('Increasing version of package from %s to %s' % (entry.version,new_version))
+                entry.version = new_version
                 entry.save_control_to_wapt(directoryname)
             package_filename =  entry.make_package_filename()
             logger.debug('Control data : \n%s' % entry.ascontrol())
@@ -1889,21 +2052,21 @@ def install():
 
         control_filename = os.path.join(directoryname,'WAPT','control')
         if not os.path.isfile(control_filename):
-            entry = Package_Entry()
-            entry.Package = packagename
-            entry.Architecture='all'
-            entry.Description = 'automatic package for %s ' % product_desc
+            entry = PackageEntry()
+            entry.package = packagename
+            entry.architecture='all'
+            entry.description = 'automatic package for %s ' % product_desc
             try:
-                entry.Maintainer = win32api.GetUserNameEx(3)
+                entry.maintainer = win32api.GetUserNameEx(3)
             except:
                 try:
-                    entry.Maintainer = win32api.GetUserName()
+                    entry.maintainer = win32api.GetUserName()
                 except:
-                    entry.Maintainer = os.environ['USERNAME']
+                    entry.maintainer = os.environ['USERNAME']
 
-            entry.Priority = 'optional'
-            entry.Section = 'base'
-            entry.Version = props.get('FileVersion',props.get('ProductVersion','0.0.0'))+'-00'
+            entry.priority = 'optional'
+            entry.section = 'base'
+            entry.version = props.get('FileVersion',props.get('ProductVersion','0.0.0'))+'-00'
             if self.config.has_option('global','default_sources_url'):
                 entry.Sources = self.config.get('global','default_sources_url') % {'packagename':packagename}
             codecs.open(control_filename,'w',encoding='utf8').write(entry.ascontrol())
@@ -1965,19 +2128,21 @@ if __name__ == '__main__':
     cfg = RawConfigParser()
     cfg.read('c:\\tranquilit\\wapt\\wapt-get.ini')
     w = Wapt(config=cfg)
+    print w.waptdb.get_param('toto')
+    #w.waptdb.db_version='00'
+    w.waptdb.upgradedb()
     print w.is_installed('tis-firebird')
-    #w.waptdb.upgradedb()
     #print w.signpackage('c:\\tranquilit\\tis-wapttest-wapt')
     #print w.signpackage('c:\\tranquilit\\tis-wapttest_0.0.0-40_all.wapt')
-    pfn = w.buildpackage('c:\\tranquilit\\tis-wapttest-wapt',True)
-    if not os.path.isfile(pfn['filename']):
-        raise Exception("""w.buildpackage('c:\\tranquilit\\tis-wapttest-wapt',True) failed""")
-    print w.signpackage(pfn['filename'])
-    print w.install_wapt(pfn['filename'],params_dict={'company':'TIS'},public_cert=w.get_public_cert())
+    #pfn = w.buildpackage('c:\\tranquilit\\tis-wapttest-wapt',True)
+    #if not os.path.isfile(pfn['filename']):
+    #    raise Exception("""w.buildpackage('c:\\tranquilit\\tis-wapttest-wapt',True) failed""")
+    #print w.signpackage(pfn['filename'])
+    #print w.install_wapt(pfn['filename'],params_dict={'company':'TIS'},public_cert=w.get_public_cert())
 
     print w.waptdb.upgradeable()
     assert isinstance(w.waptdb,WaptDB)
-    print w.waptdb.get_param('dbversion')
+    print w.waptdb.get_param('db_version')
     print w.remove('tis-waptdev',force=True)
     print w.install(['tis-waptdev'])
     print w.remove('tis-firefox',force=True)

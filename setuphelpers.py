@@ -21,7 +21,7 @@
 #
 # -----------------------------------------------------------------------
 
-__version__ = "0.4.2"
+__version__ = "0.4.4"
 
 import os
 import sys
@@ -43,6 +43,8 @@ import ctypes
 import _winreg
 import platform
 import winshell
+
+from iniparse import RawConfigParser
 
 logger = logging.getLogger()
 
@@ -410,6 +412,25 @@ def registry_readstring(root,path,keyname,default=''):
     except:
         return default
 
+def inifile_readstring(inifilename,section,key,default=''):
+    """Read a string parameter from inifile"""
+    inifile = RawConfigParser()
+    inifile.read(inifilename)
+    if inifile.has_section(section) and inifile.has_option(section,key):
+        return inifile.get(section,key)
+    else:
+        return default
+
+
+def inifile_writestring(inifilename,section,key,value):
+    """Write a string parameter to inifile"""
+    inifile = RawConfigParser()
+    inifile.read(inifilename)
+    inifile.set(section,key,value)
+    inifile.write(open(inifilename,'w'))
+
+
+
 def installed_softwares(keywords=''):
     """return list of installed software from registry (both 32bit and 64bit"""
     def check_words(target,words):
@@ -438,7 +459,7 @@ def installed_softwares(keywords=''):
                     result.append({'key':subkey,
                         'name':display_name,'version':display_version,
                         'install_date':install_date,'install_location':install_location,
-                        'uninstallstring':uninstallstring,'publisher':publisher,})
+                        'uninstall_string':uninstallstring,'publisher':publisher,})
                 i += 1
             except WindowsError,e:
                 # WindowsError: [Errno 259] No more data is available
@@ -620,7 +641,11 @@ def user_appdata():
 
 remove_file=os.unlink
 remove_tree=shutil.rmtree
-mkdirs = os.makedirs
+
+def mkdirs(path):
+    """Create directory path if it doesn't exists yet"""
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
 isfile=os.path.isfile
 isdir=os.path.isdir

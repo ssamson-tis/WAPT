@@ -21,7 +21,7 @@
 #
 # -----------------------------------------------------------------------
 
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 import sys
 import os
@@ -33,7 +33,7 @@ from optparse import OptionParser
 import logging
 import datetime
 from common import WaptDB
-from waptpackage import Package_Entry
+from waptpackage import PackageEntry
 from waptpackage import update_packages
 from common import pptable,ppdicttable
 from common import create_recursive_zip_signed
@@ -190,11 +190,11 @@ def main():
                 print "\nResults :"
                 if action<>'download':
                     for k in ('install','additional','upgrade','skipped','errors'):
-                        if result[k]:
-                            print "\n=== %s packages ===\n%s" % (k,'\n'.join( ["  %-30s | %s (%s)" % (s[0],s[1].Package,s[1].Version) for s in  result[k]]),)
+                        if result.get(k,[]):
+                            print "\n=== %s packages ===\n%s" % (k,'\n'.join( ["  %-30s | %s (%s)" % (s[0],s[1].package,s[1].version) for s in  result[k]]),)
                 else:
                     for k in ('downloaded','skipped','errors'):
-                        if result['downloads'][k]:
+                        if result.get('downloads', {'downloaded':[],'skipped':[],'errors':[]} )[k]:
                             print "\n=== %s packages ===\n%s" % (k,'\n'.join(["  %s" % (s,) for s in result['downloads'][k]]),)
 
         elif action=='download':
@@ -216,7 +216,7 @@ def main():
                 print "You must provide at least one package name to show"
                 sys.exit(1)
             if os.path.isdir(args[1]) or os.path.isfile(args[1]):
-                entry = Package_Entry().load_control_from_wapt(args[1])
+                entry = PackageEntry().load_control_from_wapt(args[1])
                 print "%s" % entry
             else:
                 print "Display package control data for %s\n" % (','.join(args[1:]),)
@@ -239,7 +239,7 @@ def main():
             print "%-39s%-70s%-20s%-70s" % ('UninstallKey','Software','Version','Uninstallstring')
             print '-'*39+'-'*70 + '-'*20 + '-'*70
             for p in setuphelpers.installed_softwares(' '.join(args[1:])) :
-                print u"%-39s%-70s%-20s%-70s" % (p['key'],p['name'],p['version'],p['uninstallstring'])
+                print u"%-39s%-70s%-20s%-70s" % (p['key'],p['name'],p['version'],p['uninstall_string'])
 
         elif action=='showlog':
             if len(args)<2:
@@ -264,6 +264,12 @@ def main():
             print "Added packages : \n%s" % "\n".join([ "  %s (%s)" % p for p in result['added'] ])
             print "Removed packages : \n%s" % "\n".join([ "  %s (%s)" % p for p in result['removed'] ])
 
+        elif action=='upgradedb':
+            (old,new) = mywapt.waptdb.upgradedb()
+            if old == new:
+                print "No database upgrade required, current %s, required %s" % (old,mywapt.waptdb.curr_db_version)
+            else:
+                print "Old version : %s to new : %s" % (old,new)
 
         elif action=='upgrade':
             result = mywapt.upgrade()
@@ -272,7 +278,7 @@ def main():
             else:
                 for k in ('install','additional','upgrade','skipped','errors'):
                     if result[k]:
-                        print "\n=== %s packages ===\n%s" % (k,'\n'.join( ["  %-30s | %s (%s)" % (s[0],s[1].Package,s[1].Version) for s in  result[k]]),)
+                        print "\n=== %s packages ===\n%s" % (k,'\n'.join( ["  %-30s | %s (%s)" % (s[0],s[1].package,s[1].version) for s in  result[k]]),)
 
             sys.exit(0)
 
@@ -281,7 +287,7 @@ def main():
             if not q:
                 print "Nothing to upgrade"
             else:
-                print ppdicttable([ p[0] for p in  q],[ ('Package',20),('Version',10)])
+                print ppdicttable([ p[0] for p in  q],[ ('package',20),('version',10)])
 
         elif action=='download-upgrade':
             result = mywapt.download_upgrades()
@@ -365,7 +371,7 @@ def main():
 
         elif action=='search':
             result = mywapt.waptdb.packages_search(args[1:])
-            print ppdicttable(result,(('Package',30),('Version',10),('Description',80)))
+            print ppdicttable(result,(('package',30),('version',10),('description',80)))
 
         elif action=='cleanup':
             result = mywapt.cleanup()
@@ -377,11 +383,11 @@ def main():
 
         elif action=='list':
             def cb(fieldname,value):
-                if value and fieldname=='InstallDate':
+                if value and fieldname=='install_date':
                     return value[0:16]
                 else:
                     return value
-            print ppdicttable(mywapt.waptdb.installed_search(args[1:]).values(),(('Package',20),('Version',15),('InstallStatus',10),('InstallDate',16),('Description',80)),callback=cb)
+            print ppdicttable(mywapt.waptdb.installed_search(args[1:]).values(),(('package',20),('version',15),('install_status',10),('install_date',16),('description',80)),callback=cb)
         else:
             print 'Unknown action %s' % action
             sys.exit(1)
