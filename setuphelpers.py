@@ -216,6 +216,27 @@ def default_overwrite_older(src,dst):
         logger.debug(u'Overwriting file on target is older than source: "%s"' % (dst,))
         return True
 
+def register_ext(appname,fileext,shellopen,icon=None,otherverbs=[]):
+    """Associates a file extension with an application, and command to open it"""
+    def setvalue(key,path,value):
+        rootpath = os.path.dirname(path)
+        name = os.path.basename(path)
+        k = reg_openkey_noredir(key,path,sam=KEY_READ | KEY_WRITE,create_if_missing=True)
+        if value<>None:
+            reg_setvalue(k,'',value)
+    filetype = appname+fileext
+    setvalue(HKEY_CLASSES_ROOT,fileext,filetype)
+    setvalue(HKEY_CLASSES_ROOT,filetype,appname+ " file")
+    if icon:
+        setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"DefaultIcon"),icon)
+    setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"shell"),'')
+    setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"shell","open"),'')
+    setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"shell","open","command"),shellopen)
+    if otherverbs:
+        for (verb,cmd) in otherverbs:
+            setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"shell",verb),'')
+            setvalue(HKEY_CLASSES_ROOT,makepath(filetype,"shell",verb,"command"),cmd)
+
 def copytree2(src, dst, ignore=None,onreplace=default_skip,oncopy=default_oncopy):
     """Copy src directory to dst directory. dst is created if it doesn't exists
         src can be relative to installation temporary dir
