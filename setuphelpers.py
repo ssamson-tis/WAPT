@@ -544,7 +544,7 @@ def unregister_uninstall(uninstallkey,win64app=False):
         #key = reg_openkey_noredir(_winreg.HKEY_LOCAL_MACHINE,root)
         _winreg.DeleteKeyEx(_winreg.HKEY_LOCAL_MACHINE,root.encode('iso8859'))
     else:
-        #root = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+        root = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"+uninstallkey
         _winreg.DeleteKey(_winreg.HKEY_LOCAL_MACHINE,root.encode('iso8859'))
 
 def host_info():
