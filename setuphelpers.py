@@ -21,7 +21,7 @@
 #
 # -----------------------------------------------------------------------
 
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 
 import os
 import sys
@@ -521,6 +521,8 @@ def register_uninstall(uninstallkey,uninstallstring,win64app=False,
     reg_setvalue(appkey,'install_date',currentdate())
     if quiet_uninstall_string:
         reg_setvalue(appkey,'QuietUninstallString',quiet_uninstall_string)
+    else:
+        reg_setvalue(appkey,'QuietUninstallString',uninstallstring)
     if display_name:
         reg_setvalue(appkey,'DisplayName',display_name)
     if display_version:

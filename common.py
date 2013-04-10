@@ -2160,6 +2160,57 @@ and install all newest packages"""
             logger.debug('  Change current directory to %s' % previous_cwd)
             os.chdir(previous_cwd)
 
+    def uninstall(self,packagename,params_dict={}):
+        """Launch the uninstall script of an installed package"
+           Source setup.py from database or filename
+        """
+        logger.info("setup.Uninstall for package %s with params %s" % (packagename,params_dict))
+
+        oldpath = sys.path
+        try:
+            previous_cwd = os.getcwd()
+            if os.path.isdir(packagename):
+                setup = import_setup(os.path.join(directoryname,'setup.py'),'__waptsetup__')
+            else:
+                logger.debug('Sourcing setup from DB')
+                setup = import_code(self.is_installed(packagename)['setuppy'],'__waptsetup__')
+
+            required_params = []
+             # be sure some minimal functions are available in setup module at install step
+            logger.debug('Source import OK')
+            if hasattr(setup,'uninstall'):
+                logger.info('Launch uninstall')
+                setattr(setup,'run',setuphelpers.run)
+                setattr(setup,'run_notfatal',setuphelpers.run_notfatal)
+                setattr(setup,'WAPT',self)
+
+                # get value of required parameters if not already supplied
+                for p in required_params:
+                    if not p in params_dict:
+                        params_dict[p] = raw_input("%s: " % p)
+
+                # set params dictionary
+                if not hasattr(setup,'params'):
+                    # create a params variable for the setup module
+                    setattr(setup,'params',params_dict)
+                else:
+                    # update the already created params with additional params from command line
+                    setup.params.update(params_dict)
+
+                result = setup.uninstall()
+                return result
+            else:
+                raise Exception('No uninstall() function in setup.py for package %s' % packagename)
+        finally:
+            if 'setup' in dir():
+                del setup
+            else:
+                logger.critical('Unable to read setup.py file')
+            sys.path = oldpath
+            logger.debug('  Change current directory to %s' % previous_cwd)
+            os.chdir(previous_cwd)
+
+
     def checkinstalled(self):
         """Source setup.py and launch checkinstalled"""
         result = False
