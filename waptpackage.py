@@ -271,7 +271,10 @@ class PackageEntry(object):
                 myzip = zipfile.ZipFile(fname,'a')
             else:
                 myzip = zipfile.ZipFile(fname,'w')
-            myzip.writestr('WAPT/control',self.ascontrol().encode('utf8'),compress_type=zipfile.ZIP_STORED)
+            try:
+                myzip.writestr('WAPT/control',self.ascontrol().encode('utf8'),compress_type=zipfile.ZIP_STORED)
+            except:
+                myzip.writestr('WAPT/control',self.ascontrol().encode('utf8'))
 
     def ascontrol(self,with_non_control_attributes = False):
         val = u"""\
