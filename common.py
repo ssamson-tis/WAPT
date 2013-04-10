@@ -613,7 +613,7 @@ class WaptDB(object):
 
             if not (old_structure_version,self.curr_db_version) in db_upgrades:
                 logger.warning('no rules to upgrade from version %s to version %s, ' % (old_structure_version,self.curr_db_version))
-                self.db_version = new_structure_version
+                self.db_version = self.curr_db_version
                 return (old_structure_version,self.curr_db_version)
 
             logger.info('Upgrade database schema')
