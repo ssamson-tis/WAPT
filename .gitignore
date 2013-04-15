@@ -13,5 +13,16 @@ wapttray/lib
 waptservice/lib
 waptserviceapp/lib
 /*.log
-
 /appwaptservice.exe
+*.[oa]
+*.ppu
+*.lps
+*.compiled
+*.bak*
+*.exe
+*.dll
+*.so
+*.bat
+*.compiled
+bin/
+test/lib/
