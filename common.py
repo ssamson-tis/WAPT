@@ -303,7 +303,8 @@ def ssl_verify_content(content,signature,public_cert):
     pubkey.assign_rsa(rsa)
     pubkey.verify_init()
     pubkey.verify_update(content)
-    return pubkey.verify_final(signature) == 1
+    if not pubkey.verify_final(signature):
+        raise Exception('SSL signature verification failed, either public certificate does not match signature or signed content has been changed')
 
 def create_recursive_zip_signed(zipfn, source_root, target_root = u"",excludes = [u'.svn',u'.git*',u'*.pyc',u'*.dbg',u'src']):
     """Create a zip file with filename zipf from source_root directory with target_root as new root.
