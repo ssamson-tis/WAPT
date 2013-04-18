@@ -447,7 +447,9 @@ def main():
             for a in args[1:]:
                 waptfiles += glob.glob(a)
             waptfile_arg = " ".join(['"%s"' % f for f in waptfiles])
-            setuphelpers.run(mywapt.upload_cmd % {'waptfile': waptfile_arg  })
+            print setuphelpers.run(mywapt.upload_cmd % {'waptfile': waptfile_arg  })
+            if mywapt.after_upload:
+                print setuphelpers.run(mywapt.after_upload % {'waptfile': waptfile_arg  })
 
         elif action=='search':
             if options.update_packages:

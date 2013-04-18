@@ -478,7 +478,14 @@ def registry_readstring(root,path,keyname,default=''):
     except:
         return default
 
-def inifile_readstring(inifilename,section,key,default=''):
+
+def inifile_hasoption(inifilename,section,key):
+    """Read a string parameter from inifile"""
+    inifile = RawConfigParser()
+    inifile.read(inifilename)
+    return inifile.has_section(section) and inifile.has_option(section,key)
+
+def inifile_readstring(inifilename,section,key,default=None):
     """Read a string parameter from inifile"""
     inifile = RawConfigParser()
     inifile.read(inifilename)
@@ -487,15 +494,14 @@ def inifile_readstring(inifilename,section,key,default=''):
     else:
         return default
 
-
 def inifile_writestring(inifilename,section,key,value):
     """Write a string parameter to inifile"""
     inifile = RawConfigParser()
     inifile.read(inifilename)
+    if not inifile.has_section(section):
+        inifile.add_section(section)
     inifile.set(section,key,value)
     inifile.write(open(inifilename,'w'))
-
-
 
 def installed_softwares(keywords=''):
     """return list of installed software from registry (both 32bit and 64bit"""
